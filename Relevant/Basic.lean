@@ -919,30 +919,41 @@ theorem Finset.Max.idk_yet' {α} [LinearOrder α] {s s' : Finset α} (h : s'.Non
 
 def Formula.impliesFold (φ : Formula) (transforms : List Formula) (s : Finset Nat) : Formula :=
   (transforms.foldr
-    (fun ψ (χ, i) ↦ (if i ∈ s then ⟪χ → ψ⟫ else ψ, i.pred))
+    (fun ψ (χ, i) ↦ (if i ∈ s then ⟪ψ → χ⟫ else χ, i.pred))
     (φ, transforms.length.pred)).fst
-
-/-
-  Need the following facts:
-    - if `proof = .hyp ψ`, then `transforms[l] = ψ`
-    - otherwise, `transforms.length = l + 1`
--/
 
 def transformInner' {l φ s} (proof : DJLevelledFormula l φ s) (transforms : List Formula)
     (hl : l ≠ 0) (hl' : l.succ ≤ transforms.length)
     (h : proof ≍ DJLevelledFormula.hyp (l:=l) φ ∨ transforms.length = l.succ)
+    (h' : proof ≍ DJLevelledFormula.hyp (l:=l) φ → transforms[l.pred]'(by sorry) = φ)
     : DJQuasiProof (φ.impliesFold transforms s) :=
-  match h' : proof with
-  | .ifIntro ψ χ h => by
+  match h'' : proof with
+  | .hyp ψ => by
     expose_names
-    let χ' := transformInner' χ (transforms ++ [φ_1]) (by simp) (by simp; exact hl')
-    unfold Formula.impliesFold at χ'
-    simp [List.foldr_append] at χ'
+    subst h_2
     unfold Formula.impliesFold
     simp
 
-    -- Just need that `transforms.length = l + 1`.
     sorry
+  | .ifIntro ψ χ h => by
+    expose_names
+    have : transforms.length = l.succ := by
+      sorry
+    let χ' := transformInner' χ (transforms ++ [φ_1]) (by simp) (by simp; exact hl') (by aesop) (by sorry)
+    unfold Formula.impliesFold at χ'
+    simp [List.foldr_append, this] at χ'
+    -- We need to show that `x.2 ≠ l + 1`, then we have equality.
+    unfold Formula.impliesFold
+    simp
+    -- exact χ'
+    sorry
+  | .dni ψ => by
+    let ψ' := transformInner' ψ transforms hl hl' (by sorry) (by sorry)
+
+    sorry
+  | .dne ψ => by exact transformInner' ψ.dne transforms hl hl' h (by aesop)
+  | .andElim₁ ψ => by exact transformInner' ψ.andElim₁ transforms hl hl' h (by aesop)
+  | .andElim₂ ψ => by exact transformInner' ψ.andElim₂ transforms hl hl' h (by aesop)
   | _ => sorry
 
 -- The idea is to make the return of this an unfolding thing so that it always returns the
