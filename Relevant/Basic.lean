@@ -1,6 +1,7 @@
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Vector.Basic
 import Mathlib.Data.Set.Basic
+import Mathlib.Data.List.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Max
 import Mathlib.Order.Basic
@@ -917,10 +918,41 @@ theorem Finset.Max.idk_yet' {α} [LinearOrder α] {s s' : Finset α} (h : s'.Non
   have right : (s ∪ s').max' (Nonempty.inr h) ≤ s'.max' h := le_max' s' _ h'
   exact le_antisymm left right
 
+@[simp]
+def Formula.impliesFoldOuter (φ : Formula) (transforms : List Formula) (s : Finset Nat) :
+    Formula × Nat :=
+  transforms.foldr (fun ψ (χ, i) ↦ (if i ∈ s then ⟪ψ → χ⟫ else χ, i.pred))
+    (φ, transforms.length.pred)
+
+-- lemma gaz : transforms.foldr (fun ψ (χ, i) ↦ (if i ∈ s then ⟪ψ → χ⟫ else χ, i.pred))
+
 def Formula.impliesFold (φ : Formula) (transforms : List Formula) (s : Finset Nat) : Formula :=
-  (transforms.foldr
-    (fun ψ (χ, i) ↦ (if i ∈ s then ⟪ψ → χ⟫ else χ, i.pred))
-    (φ, transforms.length.pred)).fst
+  Prod.fst <| φ.impliesFoldOuter transforms s
+
+lemma gaz {φ ψ : Formula} {transforms s} :
+    φ.impliesFold (ψ :: transforms) s = if 0 ∈ s
+      then ψ.implies <| φ.impliesFold transforms (s.image Nat.pred)
+      else φ.impliesFold transforms (s.image Nat.pred) := by
+  induction transforms
+  case nil =>
+    unfold Formula.impliesFold
+    simp
+  case cons χ rest ih =>
+    split
+    next h =>
+
+      sorry
+    next h => sorry
+  -- unfold Formula.impliesFold
+  -- simp
+  -- split
+  -- next h =>
+  --   split
+  --   next h' =>
+  --     simp_all only [Formula.implies.injEq, true_and]
+  --     sorry
+  --   next h' => sorry
+  -- next h => sorry
 
 def chainPrefix {φ ψ transforms s} (proof : DJQuasiProof (φ.impliesFold transforms s))
     (f : DJQuasiProof φ → DJQuasiProof ψ) (proof₁ : ∀ χ, DJQuasiProof ⟪(χ → φ) → (χ → ψ)⟫) :
@@ -935,15 +967,20 @@ def chainPrefix {φ ψ transforms s} (proof : DJQuasiProof (φ.impliesFold trans
     simp at proof
     split
     next h =>
+      simp at h
       split at proof
       next h' =>
+        -- Presumably here are two cases, one where the rest of the fold is
+        -- trivial, and the other where it is not.
         sorry
       next h' => sorry -- This is impossible.
     next h =>
       split at proof
       next h' => sorry -- This is impossible.
       next h' =>
-
+        -- have : ψ.implies (χ :: rest) s =
+        let prefixed := chainPrefix
+          (proof ◂ by unfold Formula.impliesFold; simp [h']) f proof₁
         sorry
 
 def transformInner' {l φ s} (proof : DJLevelledFormula l φ s) (transforms : List Formula)
