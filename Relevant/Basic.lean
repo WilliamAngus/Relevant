@@ -922,6 +922,30 @@ def Formula.impliesFold (φ : Formula) (transforms : List Formula) (s : Finset N
     (fun ψ (χ, i) ↦ (if i ∈ s then ⟪ψ → χ⟫ else χ, i.pred))
     (φ, transforms.length.pred)).fst
 
+def chainPrefix {φ ψ transforms s} (proof : DJQuasiProof (φ.impliesFold transforms s))
+    (f : DJQuasiProof φ → DJQuasiProof ψ) (proof₁ : ∀ χ, DJQuasiProof ⟪(χ → φ) → (χ → ψ)⟫) :
+    DJQuasiProof (ψ.impliesFold transforms s) :=
+  match transforms with
+  | [] => by
+    unfold Formula.impliesFold at *
+    exact f proof
+  | χ :: rest => by
+    unfold Formula.impliesFold at *
+    simp
+    simp at proof
+    split
+    next h =>
+      split at proof
+      next h' =>
+        sorry
+      next h' => sorry -- This is impossible.
+    next h =>
+      split at proof
+      next h' => sorry -- This is impossible.
+      next h' =>
+
+        sorry
+
 def transformInner' {l φ s} (proof : DJLevelledFormula l φ s) (transforms : List Formula)
     (hl : l ≠ 0) (hl' : l.succ ≤ transforms.length)
     (h : proof ≍ DJLevelledFormula.hyp (l:=l) φ ∨ transforms.length = l.succ)
@@ -949,10 +973,23 @@ def transformInner' {l φ s} (proof : DJLevelledFormula l φ s) (transforms : Li
     sorry
   | .dni ψ => by
     let ψ' := transformInner' ψ transforms hl hl' (by sorry) (by sorry)
-
-    sorry
-  | .dne ψ => by exact transformInner' ψ.dne transforms hl hl' h (by aesop)
-  | .andElim₁ ψ => by exact transformInner' ψ.andElim₁ transforms hl hl' h (by aesop)
+    exact chainPrefix ψ' (fun φ ↦ DJQuasiProof.dni φ) (fun χ ↦ .thm (DJ₁ (φ:=χ)))
+    -- Given A → (B → (C → D)), deduce A → (B → (C → ¬¬D))
+    -- Have (φ → ψ) → (φ → ¬¬ψ)
+    -- Want something like (φ → ψ) → (φ → ¬¬ψ)...
+    -- Maybe (φ → ψ) → (ψ → χ) → (φ → χ)
+    -- A → B
+    -- B → C
+    -- A → C
+    -- I.e., repeated prefixing!
+    -- So I need to create a function which can generally perform this repeated prefixing.
+    -- Then, I think, we're good to go.
+  | .dne ψ =>
+    -- DNE is similar to DNI
+    by exact transformInner' ψ.dne transforms hl hl' h (by aesop)
+  | .andElim₁ ψ => by
+    -- andElims are similar
+    exact transformInner' ψ.andElim₁ transforms hl hl' h (by aesop)
   | .andElim₂ ψ => by exact transformInner' ψ.andElim₂ transforms hl hl' h (by aesop)
   | _ => sorry
 
